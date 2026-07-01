@@ -1,48 +1,49 @@
 
 # 📦 BioMAD
 
-
-**BioMAD** is a simple drag-and-drop tool that takes raw movement data from wearable sensors (like smartwatches or research trackers) and turns it into clean, useful health metrics.
-
-It acts as an easy-to-use ingestion and filtering gateway. While existing digital health libraries usually expect rigid file formats from specific brands, **BioMAD** lets you feed in raw data from *any* device using a simple web dashboard.
+An open-source stream ingestion gateway and conditioning pipeline that decodes raw IMU sensor data from any wearable device into clean, standardized digital health metrics.
 
 ---
 
 ## ❓ Why It Matters
 
-When tracking movement in clinical trials, you run into two big problems:
+In digital health and clinical trials, wearable devices capture continuous, real-time insights into a patient’s daily life. However, data engineers and clinical researchers frequently hit two frustrating roadblocks:
 
-1. **Wrong Formats:** Legacy software expects fixed files, but modern apps capture data in raw, continuous streams (like JSON or CSV dumps).
-2. **Naming Confusion:** Different watches use different names for the same thing (one calls it `accel_x`, another calls it `acceleration_X`).
+1. **Data Fragmentation & Label Confusion:** Data ingestion is stalled by rigid file formats and naming inconsistencies across consumer or medical-grade device brands. One device outputs a file with `accel_x`, while another outputs a stream labeled `acceleration_X`.
+2. **Environmental Noise:** Raw Inertial Measurement Unit (IMU) data is incredibly noisy. If a patient simply rotates their wrist while sitting, the sudden shift in gravitational pull can heavily skew movement calculations, leading to inaccurate clinical endpoints.
 
-**BioMAD** fixes this by giving you a simple setup screen where you can instantly match any device's data labels to a unified system.
+**BioMAD** bridges this gap. It acts as a flexible, vendor-agnostic gateway where researchers can feed raw data streams from any wearable device, dynamically map them, and isolate genuine human physical effort.
 
 ---
 
 ## 🧮 How Data Flows
 
-```text
+```
 Raw Watch Data ──> Label Mapping (Dashboard) ──> BioMAD Clean Filter ──> SKDH Health Metrics
 
 ```
 
-### 1. The BioMAD Filter (Cleaning Gravity)
+### 1. Zero-Code Label Mapping (The Dashboard)
 
-If a patient rotates their wrist, the sensor data shifts drastically just from the pull of gravity. The **BioMAD** layer calculates a rolling **Mean Absolute Deviation (MAD)**. It filters out constant gravitational pulls so you only measure the patient's actual physical effort.
+No more custom, hardcoded parsing scripts. The pipeline features a user-friendly, drag-and-drop web dashboard built with Streamlit, allowing clinical teams to instantly map any incoming device labels to a unified system on the fly.
 
-### 2. The Health Insights Layer
+### 2. Invariant Telemetry Conditioning (The BioMAD Filter)
 
-Once the data is cleaned, it passes into the core health pipeline to calculate real-world endpoints:
+To remove constant gravitational pulls, the conditioning pipeline applies a rolling **Mean Absolute Deviation (MAD)** calculation. This filters out the gravity artifacts so downstream models measure the patient's *actual physical effort* and genuine kinetic movement.
 
-* 🏃‍♂️ **Gait:** Measuring stride cadence, rhythm, and symmetry.
-* 😴 **Sleep:** Tracking rest-activity cycles and sleep efficiency.
-* 📉 **Activity Levels:** Grouping daily movement into Sedentary, Light, or Heavy exercise.
+### 3. Clinical Health Insights
+
+Once the data layer is cleaned and standardized, it passes seamlessly into core digital health frameworks to calculate real-world clinical endpoints:
+
+* 🏃‍♂️ **Gait Analysis:** Measuring stride cadence, rhythm, and symmetry.
+* 😴 **Sleep Quality:** Tracking rest-activity cycles and sleep efficiency.
+* 📉 **Activity Biomarkers:** Grouping daily movement into Sedentary, Light, or Heavy exercise.
 
 ---
 
 ## 🚀 Run the Dashboard
 
-To open the user-friendly drag-and-drop web app interface locally or in your Codespace, run this command in your terminal:
+To launch the interactive drag-and-drop web app interface locally or in your GitHub Codespace, run this command in your terminal:
 
 ```bash
 export PYTHONPATH=src
@@ -83,4 +84,4 @@ If you utilize this pipeline in academic literature or clinical trial reporting,
 
 ```
 
-This project is open-source and available under the [MIT License](https://www.google.com/search?q=LICENSE).
+This project is open-source and available under the [MIT License](https://github.com/katanai888/BioMAD).
