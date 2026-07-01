@@ -1,10 +1,6 @@
-No, we can strip out that raw Python block from the Quick Start section to make the README incredibly clean and focused purely on using your new dashboard.
 
-Here is the ultimate, simplified version:
 
----
-
-# 📦 biomad
+# 📦 BioMAD
 
 **biomad** is a simple drag-and-drop tool that takes raw movement data from wearable sensors (like smartwatches or research trackers) and turns it into clean, useful health metrics.
 
