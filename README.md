@@ -1,7 +1,6 @@
 
 # 📦 BioMAD
 
-By **Kat Usop** [](https://opensource.org/licenses/MIT)
 
 **BioMAD** is a simple drag-and-drop tool that takes raw movement data from wearable sensors (like smartwatches or research trackers) and turns it into clean, useful health metrics.
 
