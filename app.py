@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 
 # Page Configuration for a wider, professional layout
 st.set_page_config(page_title="BioMAD & SKDH Ingestion Pipeline", layout="wide")
@@ -102,7 +103,7 @@ if show_explanation:
         )
 
 # ==========================================
-# 3. FILE HANDLING & INGESTION STATUS
+# 3. FILE HANDLING & INGESTION PROCESSING
 # ==========================================
 st.write("---")
 uploaded_file = st.file_uploader(
@@ -111,7 +112,59 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file is not None:
-    st.success("🎉 Payload successfully cached in memory. Column schemas are ready for mapping validation.")
+    try:
+        # Load data based on format
+        if uploaded_file.name.endswith('.csv'):
+            df = pd.read_csv(uploaded_file)
+        else:
+            df = pd.read_json(uploaded_file)
+            
+        # Verify columns exist
+        required_cols = [timestamp_col, accel_x_col, accel_y_col, accel_z_col]
+        missing_cols = [c for c in required_cols if c not in df.columns]
+        
+        if missing_cols:
+            st.error(f"❌ Structural Mapping Failed! Missing columns in payload: {missing_cols}")
+            st.warning("Please adjust the active key mapping in the sidebar panel to match your source data headers.")
+        else:
+            st.success("🎉 Payload parsed successfully! Computing clinical metrics...")
+            
+            # Extract arrays based on user mapping
+            x = df[accel_x_col].values
+            y = df[accel_y_col].values
+            z = df[accel_z_col].values
+            
+            # --- BioMAD Real-time Algorithm Execution ---
+            # 1. Calculate vector magnitude
+            vm = np.sqrt(x**2 + y**2 + z**2)
+            # 2. Compute Mean Absolute Deviation (MAD) as a movement indicator
+            biomad_score = np.abs(vm - np.mean(vm))
+            df['BioMAD_Movement_Intensity'] = biomad_score
+            
+            # Display processing summary metrics
+            m_col1, m_col2, m_col3 = st.columns(3)
+            m_col1.metric("Total Data Packets Ingested", f"{len(df):,}")
+            m_col2.metric("Mean Movement Magnitude", f"{np.mean(vm):.3f} g")
+            m_col3.metric("Computed BioMAD Intensity", f"{np.mean(biomad_score):.3f} g")
+            
+            # Plot data streams side by side
+            st.subheader("📊 Processing Execution Telemetry")
+            chart_col1, chart_col2 = st.columns(2)
+            
+            with chart_col1:
+                st.markdown("**Mapped Input Waveforms (Gravity Contaminated)**")
+                st.line_chart(df[[accel_x_col, accel_y_col, accel_z_col]].head(1000))
+                
+            with chart_col2:
+                st.markdown("**Processed BioMAD Movement Output (Gravity Isolated for SKDH Pipeline)**")
+                st.line_chart(df[['BioMAD_Movement_Intensity']].head(1000))
+                
+            # Data Frame Preview
+            st.write("### Data Preview (First 5 Ingested Epochs)")
+            st.dataframe(df[[timestamp_col, accel_x_col, accel_y_col, accel_z_col, 'BioMAD_Movement_Intensity']].head())
+            
+    except Exception as e:
+        st.error(f"Error parsing file dataset structure: {e}")
 else:
     st.info(
         "💡 **Getting Started:** Drop a telemetry data file above. The active mapping configuration on the left "
