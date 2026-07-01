@@ -1,3 +1,5 @@
+<img width="1920" height="1080" alt="Sleek Data Stream Landscape with Minimalist Wearables" src="https://github.com/user-attachments/assets/fc9fa909-5fc6-4950-9334-067358f618f7" />
+
 
 # 🦉 BioMAD
 
