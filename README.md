@@ -1,56 +1,88 @@
-![skdh_badge](https://github.com/PfizerRD/scikit-digital-health/workflows/skdh/badge.svg)
+No, we can strip out that raw Python block from the Quick Start section to make the README incredibly clean and focused purely on using your new dashboard.
 
-Scikit Digital Health (SKDH) is a Python package with methods for ingesting and analyzing wearable inertial sensor data.
+Here is the ultimate, simplified version:
 
-- Documentation: https://scikit-digital-health.readthedocs.io/en/latest/
-- Bug reports: https://github.com/PfizerRD/scikit-digital-health/issues
-- Contributing: https://scikit-digital-health.readthedocs.io/en/latest/src/dev/contributing.html
+---
 
-SKDH provides the following:
+# 📦 biomad
 
-- Methods for ingesting data from binary file formats (ie Axivity, GeneActiv)
-- Preprocessing of accelerometer data
-- Common time-series signal features
-- Common time-series/inertial data analysis functions
-- Inertial data analysis algorithms (ie gait, sit-to-stand, sleep, activity)
+**biomad** is a simple drag-and-drop tool that takes raw movement data from wearable sensors (like smartwatches or research trackers) and turns it into clean, useful health metrics.
 
-### Availability
+It acts as an easy-to-use bridge for [Scikit Digital Health (SKDH)](https://scikit-digital-health.readthedocs.io/en/latest/). While SKDH usually expects specific file formats from certain brands, **biomad** lets you feed in raw data from *any* device using a simple web dashboard.
 
+---
 
-SKDH is available on both `conda-forge` and `PyPI`.
+## ❓ Why It Matters
 
-```shell
-conda install scikit-digital-health -c conda-forge
+When tracking movement in clinical trials, you run into two big problems:
+
+1. **Wrong Formats:** Legacy software expects fixed files, but modern apps capture data in raw, continuous streams (like JSON or CSV dumps).
+2. **Naming Confusion:** Different watches use different names for the same thing (one calls it `accel_x`, another calls it `acceleration_X`).
+
+**biomad** fixes this by giving you a simple setup screen where you can instantly match any device's data labels to a unified system.
+
+---
+
+## 🧮 How Data Flows
+
+```text
+Raw Watch Data ──> Label Mapping (Dashboard) ──> BioMAD Clean Filter ──> SKDH Health Metrics
+
 ```
 
-or 
+### 1. The BioMAD Filter (Cleaning Gravity)
 
-```shell
+If a patient rotates their wrist, the sensor data shifts drastically just from the pull of gravity. The **BioMAD** layer calculates a rolling **Mean Absolute Deviation (MAD)**. It filters out constant gravitational pulls so you only measure the patient's actual physical effort.
+
+### 2. The SKDH Layer (The Health Insights)
+
+Once the data is cleaned, it passes into the core health pipeline to calculate real-world endpoints:
+
+* 🏃‍♂️ **Gait:** Measuring stride cadence, rhythm, and symmetry.
+* 😴 **Sleep:** Tracking rest-activity cycles and sleep efficiency.
+* 📉 **Activity Levels:** Grouping daily movement into Sedentary, Light, or Heavy exercise.
+
+---
+
+## 🚀 Run the Dashboard
+
+To open the user-friendly drag-and-drop web app interface locally or in your Codespace, run this command in your terminal:
+
+```bash
+export PYTHONPATH=src
+streamlit run app.py --server.address 0.0.0.0 --server.port 8501
+
+```
+
+---
+
+## 🛠️ Installation
+
+First, install the core digital health package:
+
+```bash
 pip install scikit-digital-health
+
 ```
 
-> [!WARNING]
-> Windows pre-built wheels are provided as-is, with limited/no testing on changes made to compile extensions for Windows.
+*(Windows users: You might need to install the Microsoft Visual C++ Redistributable >14.0).*
 
-> [!NOTE]
-> Windows users may need to install an additional requirement: Microsoft Visual C++ redistributable >14.0. The 2015 version can be found here: https://www.microsoft.com/en-us/download/details.aspx?id=53587
+Next, install the dashboard tools:
 
-### Build Requirements
+```bash
+pip install streamlit pandas
 
-As of 0.9.15, Scikit Digital Health is built using Meson.
+```
 
+---
 
-### Examples
+## 📜 Citation & License
 
-An example notebook can be found in the examples folder: [SKDH tutorial](examples/skdh_tutorial.ipynb)
-along with some sample data. The tutorial walks through running individual modules in SKDH,
-then building up a pipeline, and finally creating a new module.
+If you use this pipeline or the underlying `SKDH` framework for academic research, please cite:
 
+```text
+[1] L. Adamowicz, Y. Christakis, M. D. Czech, and T. Adamusiak, “SciKit Digital Health: Python Package for Streamlined Wearable Inertial Sensor Data Processing,” JMIR mHealth and uHealth, vol. 10, no. 4, p. e36762, Apr. 2022, doi: 10.2196/36762.
 
-### Citation
+```
 
-If you use SKDH in your research, please include the following citation:
-
-<a id="1">[1]</a>
-L. Adamowicz, Y. Christakis, M. D. Czech, and T. Adamusiak, “SciKit Digital Health: Python Package for Streamlined Wearable Inertial Sensor Data Processing,” JMIR mHealth and uHealth, vol. 10, no. 4, p. e36762, Apr. 2022, doi: 10.2196/36762.
-
+This project is open-source and available under the [MIT License](https://www.google.com/search?q=LICENSE).
