@@ -1,5 +1,5 @@
 
-# 📦 BioMAD
+# 🦉 BioMAD
 
 An open-source stream ingestion gateway and conditioning pipeline that decodes raw IMU sensor data from any wearable device into clean, standardized digital health metrics.
 
