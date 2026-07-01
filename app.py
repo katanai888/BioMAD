@@ -1,172 +1,162 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
+import json
+import importlib.util
 
-# Page Configuration for a wider, professional layout
-st.set_page_config(page_title="BioMAD & SKDH Ingestion Pipeline", layout="wide")
+# Set up page configuration
+st.set_page_config(page_title="BioMAD Ingestion Dashboard", page_icon="🦉", layout="wide")
 
-# ==========================================
-# 1. SIDEBAR CONFIGURATION & CLINICAL MAPPING
-# ==========================================
-st.sidebar.header("📋 Stream Configuration")
-
-# The Core Toggle for Health Informatics Mode
-show_explanation = st.sidebar.toggle("ℹ️ Enable Health Informatics Explanation Mode", value=True)
-
-st.sidebar.write("---")
-st.sidebar.subheader("Axis & Temporal Mapping")
-
-if show_explanation:
-    st.sidebar.caption(
-        "Map incoming device-specific telemetry to standardized clinical biomechanics axes "
-        "required for physical endpoint calculations."
-    )
-else:
-    st.sidebar.caption("Map custom payload keys to target system axes.")
-
-# Interactive inputs with dynamic, education-focused tooltips
-timestamp_col = st.sidebar.text_input(
-    "Timestamp column", 
-    value="timestamp",
-    help=(
-        "**Temporal Anchor:** Synchronizes raw streaming sensor windows with objective external events "
-        "(e.g., electronic patient-reported outcomes [ePROs], controlled clinical trial logs, or EHR timestamps)."
-    ) if show_explanation else "The key for your datetime array."
+st.title("🦉 BioMAD Stream Ingestion Dashboard")
+st.subheader("High-Frequency Wearable Telemetry & Rotation-Invariant Conditioning Layer")
+st.markdown(
+    "Upload raw CSV/JSON sensor payloads, align native hardware schemas, "
+    "and isolate physical exertion using the **BioMAD (Mean Absolute Deviation)** filtering matrix."
 )
 
-accel_x_col = st.sidebar.text_input(
-    "X-axis column", 
-    value="accel_x",
-    help=(
-        "**Medio-Lateral (ML) Axis:** Captures coronal-plane, side-to-side acceleration vectors. "
-        "Critical for calculating lateral sway, postural instability, and fall-risk indices in neurodegenerative profiles."
-    ) if show_explanation else "Raw acceleration vector on the X-axis."
-)
+# Dynamically load StreamIngestor to bypass missing compiled math extensions
+spec = importlib.util.spec_from_file_location('skdh.io.stream', 'src/skdh/io/stream.py')
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+StreamIngestor = module.StreamIngestor
 
-accel_y_col = st.sidebar.text_input(
-    "Y-axis column", 
-    value="accel_y",
-    help=(
-        "**Vertical (V) Axis:** Captures longitudinal, superior-inferior acceleration. "
-        "The primary vector utilized for calculating step-impact forces, heel-strike velocity, and gait cadence."
-    ) if show_explanation else "Raw acceleration vector on the Y-axis."
-)
+# Sidebar configuration for column mapping
+st.sidebar.header("🛠️ Hardware Telemetry Mapping")
+st.sidebar.markdown("Align your raw incoming sensor keys to the expected axis outputs.")
 
-accel_z_col = st.sidebar.text_input(
-    "Z-axis column", 
-    value="accel_z",
-    help=(
-        "**Antero-Posterior (AP) Axis:** Captures sagittal-plane, forward-and-backward acceleration vectors. "
-        "Essential for analyzing forward translational velocity, propulsion, and catching sudden forward trips or stumbles."
-    ) if show_explanation else "Raw acceleration vector on the Z-axis."
-)
+mapping_x = st.sidebar.text_input("X Axis Key Mapping", "accel_x")
+mapping_y = st.sidebar.text_input("Y Axis Key Mapping", "accel_y")
+mapping_z = st.sidebar.text_input("Z Axis Key Mapping", "accel_z")
+time_key = st.sidebar.text_input("Timestamp Key", "timestamp")
 
-# ==========================================
-# 2. MAIN DASHBOARD CONTENT
-# ==========================================
-st.title("Stream Ingestion Dashboard")
-st.markdown("##### High-Frequency Wearable Telemetry Ingestion Layer")
-st.write("Upload raw CSV/JSON sensor payloads, align native hardware schemas to standardized coordinate systems, and verify structural data integrity.")
-
-# Comprehensive Health Informatics Deep Dive Panel
-if show_explanation:
-    with st.expander("🔬 Health Informatics Architecture: BioMAD + SKDH Core Framework", expanded=True):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("### 🧮 1. BioMAD Layer (The Signal Metric)")
-            st.markdown(
-                """
-                **BioMAD** utilizes a modified **Mean Absolute Deviation (MAD)** calculation applied specifically to biotelemetry. 
-                * **The Problem:** Raw triaxial accelerometer vectors ($A_x, A_y, A_z$) shift constantly based on how a patient positions or rotates their arm/wrist, meaning gravity heavily distorts the data.
-                * **The Solution:** BioMAD isolates human movement from static gravitational force by calculating absolute deviations from a rolling mean stream. This provides a clean, rotation-invariant metric of physical effort.
-                """
-            )
-            
-        with col2:
-            st.markdown("### 🚀 2. SKDH Layer (The Clinical Pipeline)")
-            st.markdown(
-                """
-                **Scikit-Digital-Health (SKDH)** takes the raw metric streams processed by BioMAD and maps them over continuous longitudinal timeframes.
-                * **Wear-Time Detection:** Automatically identifies and filters out windows where the patient took off the device.
-                * **Digital Biomarkers:** Packages the signal sequences into standardized, regulatory-ready endpoints:
-                  * 🏃‍♂️ **Gait Signature:** Stride variability, symmetry, and rhythmicity.
-                  * 😴 **Sleep Architecture:** Rest-activity cycles, sleep efficiency, and circadian patterns.
-                  * 📉 **Activity Biomarkers:** Stratifying movement into Sedentary, Light, or MVPA intensities.
-                """
-            )
-            
-        st.markdown("---")
-        st.caption(
-            "⚠️ **Data Lineage Summary:** Raw Sensor Hardware Stream ➡️ Column Mapping (This Dashboard) "
-            "➡️ BioMAD Signal Filtering ➡️ SKDH Biomarker Extraction ➡️ Clinical Trial Endpoint Database."
-        )
-
-# ==========================================
-# 3. FILE HANDLING & INGESTION PROCESSING
-# ==========================================
-st.write("---")
-uploaded_file = st.file_uploader(
-    "Upload raw high-frequency telemetry dataset", 
-    type=["csv", "json"]
-)
+# File Upload Mechanism
+uploaded_file = st.file_uploader("Drag and drop your raw sensor payload here (CSV or JSON)", type=["csv", "json"])
 
 if uploaded_file is not None:
     try:
-        # Load data based on format
+        # Parse based on file type
         if uploaded_file.name.endswith('.csv'):
-            df = pd.read_csv(uploaded_file)
+            df_raw = pd.read_csv(uploaded_file)
         else:
-            df = pd.read_json(uploaded_file)
+            df_raw = pd.DataFrame(json.load(uploaded_file))
             
-        # Verify columns exist
-        required_cols = [timestamp_col, accel_x_col, accel_y_col, accel_z_col]
-        missing_cols = [c for c in required_cols if c not in df.columns]
+        st.success(f"Successfully loaded {len(df_raw)} raw data packets!")
         
-        if missing_cols:
-            st.error(f"❌ Structural Mapping Failed! Missing columns in payload: {missing_cols}")
-            st.warning("Please adjust the active key mapping in the sidebar panel to match your source data headers.")
+        # Build the column layout dictionary dynamically from UI inputs
+        column_mapping = {
+            mapping_x: 'x',
+            mapping_y: 'y',
+            mapping_z: 'z'
+        }
+        
+        # Instantiate and run the ingestor stream layer
+        ingestor = StreamIngestor(column_mapping=column_mapping, time_col=time_key)
+        processed_data = ingestor.ingest(df_raw)
+        
+        # Visualize the metrics
+        st.header("📈 Normalized Acceleration Output")
+        
+        if 'accel' in processed_data and processed_data['accel'].shape[0] > 0:
+            # Reconstruction for line chart compatibility
+            accel_matrix = processed_data['accel']
+            chart_df = pd.DataFrame(accel_matrix, columns=['X-Axis', 'Y-Axis', 'Z-Axis'])
+            
+            if 'time' in processed_data:
+                chart_df['Time'] = pd.to_datetime(processed_data['time'], unit='s', errors='coerce')
+                chart_df = chart_df.set_index('Time')
+                
+            st.line_chart(chart_df)
+            
+            # Metadata analysis dump
+            with st.expander("🔍 View Ingested Pipeline Payload Object"):
+                st.json({
+                    "sample_count": len(chart_df),
+                    "keys_extracted": list(processed_data.keys()),
+                    "shape": str(accel_matrix.shape)
+                })
         else:
-            st.success("🎉 Payload parsed successfully! Computing clinical metrics...")
-            
-            # Extract arrays based on user mapping
-            x = df[accel_x_col].values
-            y = df[accel_y_col].values
-            z = df[accel_z_col].values
-            
-            # --- BioMAD Real-time Algorithm Execution ---
-            # 1. Calculate vector magnitude
-            vm = np.sqrt(x**2 + y**2 + z**2)
-            # 2. Compute Mean Absolute Deviation (MAD) as a movement indicator
-            biomad_score = np.abs(vm - np.mean(vm))
-            df['BioMAD_Movement_Intensity'] = biomad_score
-            
-            # Display processing summary metrics
-            m_col1, m_col2, m_col3 = st.columns(3)
-            m_col1.metric("Total Data Packets Ingested", f"{len(df):,}")
-            m_col2.metric("Mean Movement Magnitude", f"{np.mean(vm):.3f} g")
-            m_col3.metric("Computed BioMAD Intensity", f"{np.mean(biomad_score):.3f} g")
-            
-            # Plot data streams side by side
-            st.subheader("📊 Processing Execution Telemetry")
-            chart_col1, chart_col2 = st.columns(2)
-            
-            with chart_col1:
-                st.markdown("**Mapped Input Waveforms (Gravity Contaminated)**")
-                st.line_chart(df[[accel_x_col, accel_y_col, accel_z_col]].head(1000))
-                
-            with chart_col2:
-                st.markdown("**Processed BioMAD Movement Output (Gravity Isolated for SKDH Pipeline)**")
-                st.line_chart(df[['BioMAD_Movement_Intensity']].head(1000))
-                
-            # Data Frame Preview
-            st.write("### Data Preview (First 5 Ingested Epochs)")
-            st.dataframe(df[[timestamp_col, accel_x_col, accel_y_col, accel_z_col, 'BioMAD_Movement_Intensity']].head())
+            st.warning("Data successfully read, but could not map into valid structures. Review your sidebar axis labels.")
             
     except Exception as e:
-        st.error(f"Error parsing file dataset structure: {e}")
+        st.error(f"Failed to process stream package: {str(e)}")
 else:
+    st.info("💡 Waiting for a telemetry stream input file to begin conditioning layer parsing.")
+
+# --- Explanation Mode ---
+st.markdown("---")
+show_explanation = st.checkbox("📖 Enable Explanation Mode", value=True)
+
+if show_explanation:
+    st.header("🧠 Core Mechanics: BioMAD & Conditioning Layer")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("1. Stream Alignment & Conditioning")
+        st.markdown(
+            "Raw wearable devices output highly variable JSON/CSV payload keys depending on the hardware vendor "
+            "(e.g., `accelX`, `A_X`, `mag_x`). The **Conditioning Layer** acts as an adaptive interface map, "
+            "standardizing these arbitrary shapes into an immutable, structured NumPy array compatible with downstream ML pipelines."
+        )
+        
+    with col2:
+        st.subheader("2. Rotation-Invariant Signal Isolation")
+        st.markdown(
+            "Instead of relying on raw coordinate orientations—which flip constantly as a user moves their wrist or torso—"
+            "the mathematical core isolates physical exertion using a variance metric. By tracking the Mean Absolute Deviation "
+            "around signal medians, gravity is factored out without needing static orientation matrices or rigid device calibration."
+        )
+
+# --- Health Informatics Guide & Use Cases ---
+st.markdown("---")
+show_informatics_guide = st.checkbox("🩺 Open Health Informatics & Use Cases Guide", value=True)
+
+if show_informatics_guide:
+    st.header("📋 Health Informatics Deployment Framework")
+    st.markdown(
+        "Health informaticists bridge the gap between noisy consumer-grade wearable endpoints "
+        "and structured, clinically actionable medical data storage (e.g., FHIR resources). "
+        "Here is how this conditioning layer stabilizes digital health pipelines:"
+    )
+    
+    # Use Case Tabs
+    tab1, tab2, tab3 = st.tabs([
+        "🔬 Clinical Research Validation", 
+        "🔄 Cross-Vendor Interoperability", 
+        "📈 Remote Patient Monitoring (RPM)"
+    ])
+    
+    with tab1:
+        st.subheader("Standardizing Physical Biomarkers")
+        st.markdown(
+            "**Scenario:** A multi-site clinical trial utilizes different device profiles across participant cohorts.\n\n"
+            "* **The Challenge:** Raw acceleration magnitudes vary wildly depending on whether an individual wears an Apple Watch, "
+            "Fitbit, or a medical-grade ActiGraph.\n"
+            "* **The Solution:** By extracting the *Mean Absolute Deviation (MAD)* stream globally, researchers obtain an "
+            "orientation-independent index of physical exertion that can be directly mapped to metabolic equivalents (METs) "
+            "without needing vendor-specific proprietary filters."
+        )
+        
+    with tab2:
+        st.subheader("Data Harmonization for EHR Ingestion")
+        st.markdown(
+            "**Scenario:** Ingesting high-frequency telemetry into a centralized health database.\n\n"
+            "* **The Challenge:** Sensor payloads use inconsistent naming schemas (`acc_x`, `accelerometerX`, `ax`).\n"
+            "* **The Solution:** The *Hardware Telemetry Mapping* interface creates a predictable middleware schema. "
+            "It maps arbitrary streams on-the-fly into standardized structural metrics fit for transactional database indexing."
+        )
+        
+    with tab3:
+        st.subheader("Isolating Artifacts in Long-Term Monitoring")
+        st.markdown(
+            "**Scenario:** Elderly patients monitored at home for gait tracking and frailty indicators.\n\n"
+            "* **The Challenge:** Gravity components skew data if the sensor moves or flips on the patient's arm.\n"
+            "* **The Solution:** Utilizing rotation-invariant algorithms strips out static gravity vectors dynamically, "
+            "meaning accidental device rotations are treated as artifacts rather than false physical activity spikes."
+        )
+        
+    # Citation & Contact Information Block
     st.info(
-        "💡 **Getting Started:** Drop a telemetry data file above. The active mapping configuration on the left "
-        "will map incoming vectors into the unified BioMAD metric processing algorithm."
+        "💡 **Informatics Project Citation & Inquiry**\n\n"
+        "This architectural pattern and stream ingestion conditioning layer were conceptualized and developed by katusop.\n\n"
+        "For system integration inquiries, custom electronic health record (EHR) pipelines, or architectural consultations, "
+        "reach out via the official website: [katusop.co](https://katusop.co)"
     )

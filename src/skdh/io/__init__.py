@@ -1,61 +1,6 @@
-"""
-.. _SKDH IO:
+"""Lightweight IO package namespace for SKDH."""
 
-File Reading (:mod:`skdh.io`)
-====================================
-
-.. currentmodule:: skdh.io
-
-Device Specific IO
-------------------
-
-These processes are designed to quickly read in data from various different
-wearable devices from their default binary file format.
-
-.. autosummary::
-    :toctree: generated/
-
-    ReadCwa
-    ReadBin
-    ReadApdmH5
-    ReadEmpaticaAvro
-
-General Data IO
----------------
-
-These processes are generic and not limited to a specific device/manufacturer's format.
-
-.. autosummary::
-    :toctree: generated/
-
-    ReadNumpyFile
-    ReadCSV
-
-Multiple File IO
-----------------
-
-Support for reading multiple files in at once
-
-.. autosummary::
-    :toctree: generated/
-
-    MultiReader
-"""
-
-from skdh.io.axivity import ReadCwa
-from skdh.io import axivity
-from skdh.io.geneactiv import ReadBin
-from skdh.io import geneactiv
-from skdh.io.apdm import ReadApdmH5
-from skdh.io import apdm
-from skdh.io.numpy_compressed import ReadNumpyFile
-from skdh.io import numpy_compressed
-from skdh.io.csv import ReadCSV
-from skdh.io import csv
-from skdh.io.empatica import ReadEmpaticaAvro
-from skdh.io import empatica
-from skdh.io import multireader
-from skdh.io.multireader import MultiReader
+from importlib import import_module
 
 __all__ = (
     "ReadCwa",
@@ -65,6 +10,7 @@ __all__ = (
     "ReadCSV",
     "ReadEmpaticaAvro",
     "MultiReader",
+    "StreamIngestor",
     "axivity",
     "geneactiv",
     "apdm",
@@ -73,3 +19,31 @@ __all__ = (
     "csv",
     "multireader",
 )
+
+
+_LAZY_IMPORTS = {
+    "ReadCwa": ("skdh.io.axivity", "ReadCwa"),
+    "ReadBin": ("skdh.io.geneactiv", "ReadBin"),
+    "ReadApdmH5": ("skdh.io.apdm", "ReadApdmH5"),
+    "ReadNumpyFile": ("skdh.io.numpy_compressed", "ReadNumpyFile"),
+    "ReadCSV": ("skdh.io.csv", "ReadCSV"),
+    "ReadEmpaticaAvro": ("skdh.io.empatica", "ReadEmpaticaAvro"),
+    "MultiReader": ("skdh.io.multireader", "MultiReader"),
+    "StreamIngestor": ("skdh.io.stream", "StreamIngestor"),
+}
+
+
+def __getattr__(name):
+    if name in _LAZY_IMPORTS:
+        module_name, attr_name = _LAZY_IMPORTS[name]
+        module = import_module(module_name)
+        value = getattr(module, attr_name)
+        globals()[name] = value
+        return value
+
+    if name in {"axivity", "geneactiv", "apdm", "empatica", "numpy_compressed", "csv", "multireader"}:
+        module = import_module(f"skdh.io.{name}")
+        globals()[name] = module
+        return module
+
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

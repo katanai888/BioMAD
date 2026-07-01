@@ -91,6 +91,8 @@ class StreamIngestor:
         if isinstance(payload, pd.DataFrame):
             return payload.copy()
         if isinstance(payload, Mapping):
+            if all(isinstance(value, (list, tuple, np.ndarray, pd.Series)) for value in payload.values()):
+                return pd.DataFrame(payload)
             return pd.DataFrame([payload])
         if isinstance(payload, (list, tuple)):
             return pd.DataFrame(payload)
